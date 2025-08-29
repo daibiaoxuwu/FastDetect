@@ -1,0 +1,5 @@
+tqdm
+matplotlib
+plotly
+numpy
+scipy
