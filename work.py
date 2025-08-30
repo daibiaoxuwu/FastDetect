@@ -89,11 +89,14 @@ def work(fstart, tstart, file_path):
     add_down = xp.sum(pair_down, axis=0)  # running total
 
     # -------- detect-window sweep --------------------------------------------
-    max_results = []  # will store tuples (retval, detect_vals_array)
-    detect_results = []  # for plotting all retval values
+    selected = []  # will store tuples (retval, detect_vals_array)
+    WINDOW = 100
+    K = 10
+    detect_results_x = []
+    detect_results_y = []  # for plotting all retval values
     res1 = []
     res2 = []
-    for dwin in tqdm(range(100)):
+    for dwin in tqdm(range(400)):
         i = dwin + Nup - 1
         ret = dechirp_fft(tstart, fstart, reader, downchirp, i, True)
         if ret is None: break
@@ -106,7 +109,7 @@ def work(fstart, tstart, file_path):
             nsamp_small = 2 ** Config.sf / Config.bw * Config.fs  # * (1 + fstart / Config.sig_freq)
             start_pos_all = nsamp_small * (i - Nup + 1) + tstart
             start_pos = around(start_pos_all)
-            plt.plot(to_host(xp.unwrap(xp.angle(reader.get(start_pos, Config.nsamp * Nup + start_pos)))))
+            plt.plot(to_host(xp.unwrap(xp.angle(reader.get(start_pos, Config.nsamp * Nup)))))
             plt.title(f"Nup {dwin=}")
             plt.show()
 
@@ -122,7 +125,7 @@ def work(fstart, tstart, file_path):
             nsamp_small = 2 ** Config.sf / Config.bw * Config.fs  # * (1 + fstart / Config.sig_freq)
             start_pos_all = nsamp_small * (i - Ndown + 1 + Config.sfdpos) + tstart
             start_pos = around(start_pos_all)
-            plt.plot(to_host(xp.unwrap(xp.angle(reader.get(start_pos, Config.nsamp * Ndown + start_pos)))))
+            plt.plot(to_host(xp.unwrap(xp.angle(reader.get(start_pos, Config.nsamp * Ndown)))))
             plt.title(f"Nup {dwin=}")
             plt.show()
 
@@ -164,36 +167,54 @@ def work(fstart, tstart, file_path):
         retval = xp.max(add_up[lo:hi]) + xp.max(add_down[lo:hi])
         res1.append(xp.max(add_up[lo:hi]))
         res2.append(xp.max(add_down[lo:hi]))
-        detect_results.append(retval.item())
+        detect_results_x.append(to_scalar(est_to_s))
+        detect_results_y.append(to_scalar(retval))
 
-        values = xp.array(to_scalar_list((retval, est_cfo_f, est_to_s, fu, fd, f0, dwin, t0)))
-        max_results.append((retval.item(), values))
+        r, cfo, to = retval, est_cfo_f, est_to_s
+        i = dwin
 
-        # keep only the top 5 by retval
-        max_results = sorted(max_results, key=lambda x: x[0], reverse=True)[:5]
-    #
-    #     # find max among all detect windows
+        # find conflicts within WINDOW
+        conflicts = [p for p in selected if abs(p["i"] - i) < WINDOW]
 
-    detect_pkt_max = xp.argmax(xp.array(to_scalar_list(detect_results)))
-    fig = pltfig1(None, res1, addvline=(detect_pkt_max,), title="plt res1")
-    fig = pltfig1(None, res2, addvline=(detect_pkt_max,), title="plt res2", fig=fig)
-    pltfig1(None, detect_results, addvline=(detect_pkt_max,), title="plt res all", fig=fig).show()
+        if not conflicts:
+            if len(selected) < K:
+                selected.append({"i": i, "r": r, "cfo": cfo, "to": to})
+            else:
+                worst = min(selected, key=lambda x: x["r"])
+                if r > worst["r"]:
+                    selected.remove(worst)
+                    selected.append({"i": i, "r": r, "cfo": cfo, "to": to})
+        else:
+            # if better than the best in its neighborhood, replace it
+            best_conf = max(conflicts, key=lambda x: x["r"])
+            if r > best_conf["r"]:
+                selected.remove(best_conf)
+                selected.append({"i": i, "r": r, "cfo": cfo, "to": to})
+
+
+    fig = pltfig1(detect_results_x, res1, title="plt res1")
+    fig = pltfig1(detect_results_x, res2, title="plt res2", fig=fig)
+    pltfig1(detect_results_x, detect_results_y, addvline=[x['to'] for x in selected], title="plt res all", fig=fig).show()
 
     anslist = []
     cfolist = []
 
-    # reader = SlidingComplex64Reader(file_path, capacity=1_000_000, prefetch_ratio=0.25) # TODO need reset?
-    for rank, (score, vals) in enumerate(max_results, start=1):
-        retval, est_cfo_f, est_to_s, fu, fd, f0, dwin, t0 = vals
+    # report top-K by retval
+    selected.sort(key=lambda x: x["r"], reverse=True)
+    for p in selected:
+        print(f"idx={p['i']:6d}  retval={p['r']:.6g}  est_cfo_f={p['cfo']:.6g}  est_to_s={p['to']:.6g}")
+        retval = p['r']
+        est_cfo_f = p['cfo']
+        est_to_s = p['to']
 
         # est_cfo_f, est_to_s = refine_ft(est_cfo_f, est_to_s, reader)
         # logger.error(f"Rw f={est_cfo_f} t={est_to_s}")
         # est_cfo_f, est_to_s = find_power_new(est_cfo_f, est_to_s, reader)
         # logger.error(f"FF f={est_cfo_f} t={est_to_s}")
-        plt.plot(to_host(xp.unwrap(xp.angle(reader.get(around(est_to_s), around(est_to_s) + Config.nsamp * 15)))))
+        plt.plot(to_host(xp.unwrap(xp.angle(reader.get(around(est_to_s) - Config.nsamp, Config.nsamp * 15)))))
         plt.axvline(Config.nsamp)
-        plt.axvline(Config.nsamp * Config.preamble_len)
+        plt.axvline(Config.nsamp * (Config.preamble_len + 1))
         plt.show()
 
         codes = decode_payload(reader, Config, est_cfo_f, est_to_s)
-        logger.info(f"Result: f={est_cfo_f} t={est_to_s} Score={score} Decoded results: {codes}")
+        logger.info(f"Result: f={est_cfo_f} t={est_to_s} Score={retval} Decoded results: {codes}")
