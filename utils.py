@@ -1,4 +1,5 @@
 import plotly.graph_objects as go
+import logging
 import os
 
 # utils.py
@@ -30,6 +31,11 @@ else:
     asnumpy = lambda a: a
     asarray = xp.asarray
 
+logging.basicConfig( format='%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s', level=logging.INFO )
+logger = logging.getLogger(__name__)
+file_handler = logging.FileHandler(f'run_250828.log')
+file_handler.setLevel(level=logging.INFO)
+logger.addHandler(file_handler)
 
 # -------- light helpers (backend-agnostic) --------
 def to_device(x):

@@ -1,9 +1,9 @@
 from utils import xp, xfft, USE_GPU, around
 import argparse
 
-parser = argparse.ArgumentParser(description="Sample argparse script")
-parser.add_argument('--sf', type=int, default=10, help="Set the value of sf (default is 7)")
-args = parser.parse_args()
+parser = argparse.ArgumentParser()
+parser.add_argument('--sf', type=int, default=10, help="Set the value of sf")
+args = parser.parse_args(args=[])
 
 class Config:
     sf = args.sf
