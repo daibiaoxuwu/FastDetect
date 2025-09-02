@@ -7,13 +7,6 @@ from aft_decode import decode_payload
 from pre_detect import FastDetectContext
 
 
-
-
-
-
-
-
-
 def work(fstart, tstart, file_path):
     file_size = os.path.getsize(file_path)
     complex64_size = xp.dtype(xp.complex64).itemsize
@@ -34,7 +27,7 @@ def work(fstart, tstart, file_path):
     res2 = []
     fast_detect = FastDetectContext(Config, xp, fstart)
 
-    for dwin in range(400):
+    for dwin in range(4000):
         r, cfo, to, res1x, res2x = fast_detect(tstart + dwin * Config.nsamp, reader)
         if r is None: break
         res1.append(res1x)

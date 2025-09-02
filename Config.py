@@ -8,9 +8,9 @@ args = parser.parse_args(args=[])
 class Config:
     sf = args.sf
     bw = 125000
-    sig_freq = 903.9e6
+    sig_freq = 904.1e6
     preamble_len = 8
-    total_len = 30
+    total_len = 10
     guess_f = 0
     fs = 1e6
     skip_preambles = 2  # skip first 8 preambles ## TODO
