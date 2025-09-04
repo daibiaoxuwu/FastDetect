@@ -13,7 +13,7 @@ class Config:
     total_len = 10
     guess_f = 0
     fs = 1e6
-    skip_preambles = 2  # skip first 8 preambles ## TODO
+    skip_preambles = 0  # skip first 8 preambles ## TODO
     code_len = 0
 
     cfo_range = bw // 4

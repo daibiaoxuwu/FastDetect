@@ -4,7 +4,8 @@ from utils import *
 from Config import Config
 from reader import SlidingComplex64Reader
 from aft_decode import decode_payload
-from pre_detect import FastDetectContext
+# from pre_detect import FastDetectContext
+from pre_detect_slow import detect_slow
 
 
 def work(fstart, tstart, file_path):
@@ -25,10 +26,10 @@ def work(fstart, tstart, file_path):
     detect_results_y = []  # for plotting all retval values
     res1 = []
     res2 = []
-    fast_detect = FastDetectContext(Config, xp, fstart)
+    # fast_detect = FastDetectContext(Config, xp, fstart)
 
-    for dwin in range(4000):
-        r, cfo, to, res1x, res2x = fast_detect(tstart + dwin * Config.nsamp, reader)
+    for dwin in range(700, 2000):
+        r, cfo, to, res1x, res2x = detect_slow(Config, xp, fstart, tstart + dwin * Config.nsamp, reader)
         if r is None: break
         res1.append(res1x)
         res2.append(res2x)
