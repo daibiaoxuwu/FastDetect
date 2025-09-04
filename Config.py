@@ -14,7 +14,7 @@ class Config:
     guess_f = 0
     fs = 1e6
     skip_preambles = 2  # skip first 8 preambles ## TODO
-    code_len = 2
+    code_len = 0
 
     cfo_range = bw // 4
     n_classes = 2 ** sf
@@ -41,7 +41,7 @@ class Config:
         if code > 0: decode_matrix_b[code, nsamples:] = refchirpc2[nsamples:]
 
     sfdpos = preamble_len + code_len
-    sfdend = sfdpos + 3
+    sfdend = sfdpos + 2
 
     detect_range_pkts = 1000 # !!! TODO
     fft_n = int(fs)

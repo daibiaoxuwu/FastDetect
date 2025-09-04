@@ -29,7 +29,7 @@ def decode_payload(reader, Config, est_cfo_f: float, est_to_s: float):
     betai = Config.bw / ((2 ** Config.sf) / Config.bw) * (1 + 2 * est_cfo_f / Config.sig_freq)
     codes = []
 
-    for pidx in range(Config.sfdpos + 2, Config.total_len):
+    for pidx in range(Config.sfdend, Config.total_len):
         start_pos_all = (2 ** Config.sf / Config.bw) * Config.fs * (pidx + 0.25) * (1 - est_cfo_f / Config.sig_freq) + est_to_s
         start_pos = around(start_pos_all)
         dt = (start_pos - start_pos_all) / Config.fs
