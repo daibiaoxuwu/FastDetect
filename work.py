@@ -77,6 +77,7 @@ def work(fstart, tstart, file_path):
         plt.plot(to_host(xp.unwrap(xp.angle(reader.get(around(est_to_s) - Config.nsamp, Config.nsamp * 15)))))
         plt.axvline(Config.nsamp)
         plt.axvline(Config.nsamp * (Config.preamble_len + 1))
+        plt.axvline(Config.nsamp * (Config.preamble_len + 1 + 2.25))
         plt.show()
 
         codes = decode_payload(reader, Config, est_cfo_f, est_to_s)

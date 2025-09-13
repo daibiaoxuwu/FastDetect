@@ -1,5 +1,6 @@
 from utils import xp, xfft, around, USE_GPU, to_host, to_scalar
 from Config import Config
+from matplotlib import pyplot as plt
 
 # ---------- helpers already in your file ----------
 
@@ -56,27 +57,57 @@ def detect_slow(cfg, xp, fstart, tstart, reader):
     hi    = int(xp.around(cfg.cfo_range * FFT_N / cfg.fs)) + FFT_N // 2
 
     # ---- allocate sliding buffers (filled in warm_start) ----
-    up_fft_result   = xp.empty((2, FFT_N), dtype=xp.complex64)
-    down_fft_result = xp.empty((2, FFT_N), dtype=xp.complex64)
     pair_up   = xp.zeros((Nup,   FFT_N - split), dtype=xp.float32)
     pair_down = xp.zeros((Ndown, FFT_N - split), dtype=xp.float32)
-    add_down  = None
 
     # Fill UP: compute Nup-1 FFTs, build pair_up rows [0..Nup-2)
     for i in range(Nup):
         ret1 = dechirp_fft(tstart, fstart, reader, downchirp, i, True)
         ret2 = dechirp_fft(tstart, fstart, reader, downchirp, i + 1, True)
-        pair_up[i] = xp.abs(ret1[ : -split]) + xp.abs(ret2[split :])
+        pair_up[i] = xp.abs(ret1[ : -split]) + xp.abs(ret2[split :]) # TODO need smaller slice?
+        # if i<=1:
+        #     plt.plot(to_host(xp.unwrap(xp.angle(reader.get(around(tstart + i * cfg.nsamp), cfg.nsamp)))))
+        #     plt.title(f'Up chirp time domain {i=}')
+        #     plt.show()
+        #     plt.plot(to_host(pair_up[i]))
+        #     plt.title(f'Up chirp FFT magnitudes {i=} sum')
+        #     plt.show()
+            # plt.plot(to_host(xp.abs(ret1[: -split])))
+            # plt.title(f'Up chirp FFT magnitudes {i=} this win')
+            # plt.show()
+            # plt.plot(to_host(xp.abs(ret2[split :])), '--')
+            # plt.title(f'Up chirp FFT magnitudes {i=} next win')
+            # plt.show()
 
     add_up = xp.sum(pair_up, axis=0)
+    # plt.plot(to_host(add_up))
+    # plt.title(f'Up chirp FFT magnitudes sum {to_host(xp.argmax(add_up))=} {lo=} {hi=}')
+    # plt.show()
 
     # Fill DOWN: compute Ndown-1 FFTs (i.e. 1), build pair_down row 0
     for i in range(Ndown):
         ret1 = dechirp_fft(tstart, fstart, reader, upchirp, i + cfg.sfdpos, False)
         ret2 = dechirp_fft(tstart, fstart, reader, upchirp, i + cfg.sfdpos + 1, False)
         pair_down[i] = xp.abs(ret1[split :]) + xp.abs(ret2[: -split])
+        # if i<=1:
+        #     plt.plot(to_host(xp.unwrap(xp.angle(reader.get(around(tstart + (i + cfg.sfdpos) * cfg.nsamp), cfg.nsamp)))))
+        #     plt.title(f'Down chirp time domain {i=}')
+        #     plt.show()
+        #     plt.plot(to_host(pair_down[i]))
+        #     plt.title(f'Down chirp FFT magnitudes {i=} sum')
+        #     plt.show()
+            # plt.plot(to_host(xp.abs(ret1[split :])))
+            # plt.title(f'Down chirp FFT magnitudes {i=} this win')
+            # plt.show()
+            # plt.plot(to_host(xp.abs(ret2[: -split])), '--')
+            # plt.title(f'Down chirp FFT magnitudes {i=} next win')
+            # plt.show()
+
 
     add_down = xp.sum(pair_down, axis=0)
+    # plt.plot(to_host(add_down))
+    # plt.title(f'Down chirp FFT magnitudes sum {to_host(xp.argmax(add_down))=} {lo=} {hi=}')
+    # plt.show()
 
     # --- peak search in restricted band ---
     fup   = int(to_scalar(xp.argmax(add_up[lo:hi]))) + lo
@@ -85,15 +116,21 @@ def detect_slow(cfg, xp, fstart, tstart, reader):
     fdown = int(to_scalar(xp.argmax(add_down[lo:hi]))) + lo
     fd_sec = -1 if fdown > FFT_N // 2 else 1
 
+    # print(f"fup bin={fup} sec={fu_sec}, fdown bin={fdown} sec={fd_sec}")
+
     fft_up   = (fup   - FFT_N // 2) / (bwnew2 / cfg.fs * FFT_N) + 0.5
     fft_down = (fdown - FFT_N // 2) / (bwnew2 / cfg.fs * FFT_N) + 0.5
-    fu = fft_up
-    fd = fft_down
+    fu = fft_up + 0.5
+    fd = fft_down - 0.5
+
+    # print(f"fft_up={fft_up}, fft_down={fft_down}")
 
     f01 = (fu + fd) / 2
     f0  = (f01 + 0.5) % 1 - 0.5
-    t0  = (f0 - fu - 0.5)
-    t0  = t0 % 1 - 1
+    t0  = (f0 - fu)
+    t0  = t0 % 1
+
+    # print(f"Initial estimates: f01={f01}, t01={f01 - fu} est f = {f01 * cfg.bw + fstart}, est t = {(f01 - fu) * cfg.tsig + tstart}")
 
     est_cfo_f = f0 * cfg.bw + fstart
     est_to_s  = t0 * cfg.tsig + tstart 
