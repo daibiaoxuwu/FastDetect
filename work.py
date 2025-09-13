@@ -15,7 +15,7 @@ def work(fstart, tstart, file_path):
     num_values = file_size // complex64_size // Config.nsamp
     print(f"{file_path=} Size in Number of symbols: {num_values}")
 
-    reader = SlidingComplex64Reader(file_path, capacity=1_000_000, prefetch_ratio=0.25)
+    reader = SlidingComplex64Reader(file_path)
    
 
     # -------- detect-window sweep --------------------------------------------
@@ -28,7 +28,7 @@ def work(fstart, tstart, file_path):
     res2 = []
     # fast_detect = FastDetectContext(Config, xp, fstart)
 
-    for dwin in range(700, 2000):
+    for dwin in range(700, 2000): # !!!
         r, cfo, to, res1x, res2x = detect_slow(Config, xp, fstart, tstart + dwin * Config.nsamp, reader)
         if r is None: break
         res1.append(res1x)
