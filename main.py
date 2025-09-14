@@ -12,7 +12,7 @@ if __name__ == "__main__":
     mod_time = os.path.getmtime(script_path)
     readable_time = time.ctime(mod_time)
     logger.warning(f"Last modified time of the script: {readable_time}")
-    work(0, 0, "data/curve_nonlinear001.fc32")
+    work(0, 0, "data/S0914_SF10_9041_at_ta_001.fc32")
 
 
 # %%

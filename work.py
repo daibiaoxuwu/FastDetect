@@ -28,7 +28,7 @@ def work(fstart, tstart, file_path):
     res2 = []
     # fast_detect = FastDetectContext(Config, xp, fstart)
 
-    for dwin in range(700, 2000): # !!!
+    for dwin in range(2000): # !!!
         r, cfo, to, res1x, res2x = detect_slow(Config, xp, fstart, tstart + dwin * Config.nsamp, reader)
         if r is None: break
         res1.append(res1x)
@@ -59,11 +59,9 @@ def work(fstart, tstart, file_path):
     fig = pltfig1(detect_results_x, res2, title="plt res2", fig=fig)
     pltfig1(detect_results_x, detect_results_y, addvline=[x['to'] for x in selected], title="plt res all", fig=fig).show()
 
-    anslist = []
-    cfolist = []
-
     # report top-K by retval
-    selected.sort(key=lambda x: x["r"], reverse=True)
+    # selected.sort(key=lambda x: x["r"], reverse=True)
+    selected.sort(key=lambda x: x["to"], reverse=False)
     for p in selected:
         print(f"idx={p['i']:6d}  retval={p['r']:.6g}  est_cfo_f={p['cfo']:.6g}  est_to_s={p['to']:.6g}")
         retval = p['r']
@@ -80,5 +78,8 @@ def work(fstart, tstart, file_path):
         plt.axvline(Config.nsamp * (Config.preamble_len + 1 + 2.25))
         plt.show()
 
-        codes = decode_payload(reader, Config, est_cfo_f, est_to_s)
-        logger.info(f"Result: f={est_cfo_f} t={est_to_s} Score={retval} Decoded results: {codes}")
+        logger.info(f"Result: f={est_cfo_f} t={est_to_s} Score={retval}")
+        codes = decode_payload(reader, Config, est_cfo_f, est_to_s, False)
+        logger.info(f"Linear Decoded results: {codes}")
+        codes = decode_payload(reader, Config, est_cfo_f, est_to_s, True)
+        logger.info(f"Curvin Decoded results: {codes}")

@@ -10,11 +10,15 @@ class Config:
     bw = 125000
     sig_freq = 904.1e6
     preamble_len = 8
-    total_len = 10
+    payload_len = 16
     guess_f = 0
     fs = 1e6
     skip_preambles = 0  # skip first 8 preambles ## TODO
     code_len = 0
+
+    sfdpos = preamble_len + code_len
+    sfdend = sfdpos + 2
+    total_len = sfdend + payload_len
 
     cfo_range = bw // 4
     n_classes = 2 ** sf
@@ -27,21 +31,18 @@ class Config:
     decode_matrix_b = xp.zeros((n_classes, nsamp), dtype=xp.complex64)
 
     betai = bw / ((2 ** sf) / bw)
-    wflag = True
-    for code in range(n_classes):
-        if (code-1)%4!=0 and sf>=11 and wflag:
-            wflag = False
-            continue
-        nsamples = around(nsamp / n_classes * (n_classes - code))
-        f01 = bw * (-0.5 + code / n_classes)
-        refchirpc1 = xp.exp(-1j * 2 * xp.pi * (f01 * tstandard + 0.5 * betai * tstandard * tstandard))
-        f02 = bw * (-1.5 + code / n_classes)
-        refchirpc2 = xp.exp(-1j * 2 * xp.pi * (f02 * tstandard + 0.5 * betai * tstandard * tstandard))
-        decode_matrix_a[code, :nsamples] = refchirpc1[:nsamples]
-        if code > 0: decode_matrix_b[code, nsamples:] = refchirpc2[nsamples:]
-
-    sfdpos = preamble_len + code_len
-    sfdend = sfdpos + 2
+    # wflag = True
+    # for code in range(n_classes):
+    #     if (code-1)%4!=0 and sf>=11 and wflag:
+    #         wflag = False
+    #         continue
+    #     nsamples = around(nsamp / n_classes * (n_classes - code))
+    #     f01 = bw * (-0.5 + code / n_classes)
+    #     refchirpc1 = xp.exp(-1j * 2 * xp.pi * (f01 * tstandard + 0.5 * betai * tstandard * tstandard))
+    #     f02 = bw * (-1.5 + code / n_classes)
+    #     refchirpc2 = xp.exp(-1j * 2 * xp.pi * (f02 * tstandard + 0.5 * betai * tstandard * tstandard))
+    #     decode_matrix_a[code, :nsamples] = refchirpc1[:nsamples]
+    #     if code > 0: decode_matrix_b[code, nsamples:] = refchirpc2[nsamples:]
 
     detect_range_pkts = 1000 # !!! TODO
     fft_n = int(fs)
