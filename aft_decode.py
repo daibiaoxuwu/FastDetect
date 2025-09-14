@@ -67,8 +67,7 @@ def symbol_generation_by_frequency(encoded, SF, BW, Fs):
     t = np.sqrt(inner_term)
 
     # === 返回结果 ===
-    # print(f"Symbol {encoded}: {t=} {np.floor(t * Fs)=}")
-    return y[:-1], int(np.floor(t * Fs))  # 去掉最后一个采样点，保证符号长度一致
+    return y[:-1], int(np.ceil(t * Fs))  # 去掉最后一个采样点，保证符号长度一致
 
 @lru_cache(maxsize=None)
 def build_decode_matrices(n_classes: int, nsamp: int, fs: float, bw: float, sf: int, is_curving: bool):
