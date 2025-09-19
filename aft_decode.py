@@ -104,6 +104,7 @@ def decode_payload(reader, Config, est_cfo_f: float, est_to_s: float, is_curving
 
     betai = Config.bw / ((2 ** Config.sf) / Config.bw) * (1 + 2 * est_cfo_f / Config.sig_freq)
     codes = []
+    phasediffs = []
 
     for pidx in range(Config.sfdend, Config.total_len):
         start_pos_all = (2 ** Config.sf / Config.bw) * Config.fs * (pidx + 0.25) * (1 - est_cfo_f / Config.sig_freq) + est_to_s
@@ -116,5 +117,7 @@ def decode_payload(reader, Config, est_cfo_f: float, est_to_s: float, is_curving
         vals = xp.abs(data1) ** 2 + xp.abs(data2) ** 2
         coderet = int(xp.argmax(vals).item())
         codes.append(coderet)
-
+        phasediff = (xp.angle(data1[coderet]) - xp.angle(data2[coderet])) % (2 * xp.pi)
+        phasediffs.append(phasediff.item())
+    print(phasediffs)
     return codes
