@@ -37,7 +37,7 @@ def dechirp_fft(tstart, fstart, reader, refchirp, pidx, ispreamble):
     sig2 = add_freq(sig2, freqdiff)
     return myfft(sig2, n=Config.fft_n, plan=Config.plan)
 
-def detect_slow_init(cfg, xp, fstart, tstart, reader):
+def detect_slow_init(cfg, xp, fstart, tstart, dwin, reader):
     # ---- precompute chirps/consts (once) ----
     x = xp.arange(cfg.nsamp) * (1 + fstart / cfg.sig_freq)
     bwnew  = cfg.bw * (1 + fstart / cfg.sig_freq)
@@ -63,7 +63,7 @@ def detect_slow_init(cfg, xp, fstart, tstart, reader):
     retsup = xp.zeros((Nup + 1, FFT_N), dtype=xp.complex64)
     retsdown = xp.zeros((Nup + 1, FFT_N), dtype=xp.complex64)
     for i in range(Nup + 1):
-        retsup[i] = dechirp_fft(tstart, fstart, reader, downchirp, i, True)
+        retsup[i] = dechirp_fft(tstart, fstart, reader, downchirp, i + dwin, True)
     for i in range(Nup):
         pair_up[i] = xp.abs(retsup[i, : -split]) + xp.abs(retsup[i + 1, split :]) # TODO need smaller slice?
 
@@ -71,7 +71,7 @@ def detect_slow_init(cfg, xp, fstart, tstart, reader):
 
     # Fill DOWN: compute Ndown-1 FFTs (i.e. 1), build pair_down row 0
     for i in range(Ndown + 1):
-        retsdown[i] = dechirp_fft(tstart, fstart, reader, upchirp, i + cfg.sfdpos, False)
+        retsdown[i] = dechirp_fft(tstart, fstart, reader, upchirp, i + dwin + cfg.sfdpos, False)
     for i in range(Ndown):
         pair_down[i] = xp.abs(retsdown[i, split :]) + xp.abs(retsdown[i + 1, : -split])
 
@@ -93,14 +93,14 @@ def detect_slow_init(cfg, xp, fstart, tstart, reader):
     t0  = t0 % 1
 
     est_cfo_f = f0 * cfg.bw + fstart
-    est_to_s  = t0 * cfg.tsig + tstart 
+    est_to_s  = (t0 + dwin) * cfg.tsig + tstart 
 
     ret1 = float(to_scalar(xp.max(add_up[lo:hi])))
     ret2 = float(to_scalar(xp.max(add_down[lo:hi])))
     retval = ret1 + ret2
     return retval, float(est_cfo_f), float(est_to_s), ret1, ret2, retsup, retsdown
 
-def detect_slow(cfg, xp, fstart, tstart, reader, retsup_in, retsdown_in):
+def detect_slow(cfg, xp, fstart, tstart, dwin, reader, retsup_in, retsdown_in):
     # ---- precompute chirps/consts (once) ----
     x = xp.arange(cfg.nsamp) * (1 + fstart / cfg.sig_freq)
     bwnew  = cfg.bw * (1 + fstart / cfg.sig_freq)
@@ -124,14 +124,14 @@ def detect_slow(cfg, xp, fstart, tstart, reader, retsup_in, retsdown_in):
 
     # Fill UP: compute Nup-1 FFTs, build pair_up rows [0..Nup-2)
     retsup = xp.roll(retsup_in, shift=-1, axis=0)
-    retsup[Nup] = dechirp_fft(tstart, fstart, reader, downchirp, Nup, True)
+    retsup[Nup] = dechirp_fft(tstart, fstart, reader, downchirp, Nup + dwin, True)
     for i in range(Nup):
         pair_up[i] = xp.abs(retsup[i, : -split]) + xp.abs(retsup[i + 1, split :]) # TODO need smaller slice?
 
     add_up = xp.sum(pair_up, axis=0)
 
     retsdown = xp.roll(retsdown_in, shift=-1, axis=0)
-    retsdown[Ndown] = dechirp_fft(tstart, fstart, reader, upchirp, Ndown + cfg.sfdpos, False)
+    retsdown[Ndown] = dechirp_fft(tstart, fstart, reader, upchirp, Ndown + dwin + cfg.sfdpos, False)
     for i in range(Ndown):
         pair_down[i] = xp.abs(retsdown[i, split :]) + xp.abs(retsdown[i + 1, : -split])
 
@@ -153,9 +153,9 @@ def detect_slow(cfg, xp, fstart, tstart, reader, retsup_in, retsdown_in):
     t0  = t0 % 1
 
     est_cfo_f = f0 * cfg.bw + fstart
-    est_to_s  = t0 * cfg.tsig + tstart 
+    est_to_s  = (t0 + dwin) * cfg.tsig + tstart 
 
     ret1 = float(to_scalar(xp.max(add_up[lo:hi])))
     ret2 = float(to_scalar(xp.max(add_down[lo:hi])))
     retval = ret1 + ret2
-    return retval, float(est_cfo_f), float(est_to_s), ret1, ret2
+    return retval, float(est_cfo_f), float(est_to_s), ret1, ret2, retsup, retsdown

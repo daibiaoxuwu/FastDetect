@@ -30,9 +30,9 @@ def work(fstart, tstart, file_path):
     num_values = (file_size // complex64_size - around(nsamp_small * (2 + Config.sfdpos + 1) + tstart) + Config.nsamp) // Config.nsamp
     for dwin in tqdm(range(min(20, num_values))): # !!!
         if dwin == 0:
-            r, cfo, to, res1x, res2x, retsup, retsdown = detect_slow_init(Config, xp, fstart, tstart + dwin * Config.nsamp, reader)
+            r, cfo, to, res1x, res2x, retsup, retsdown = detect_slow_init(Config, xp, fstart, tstart, dwin, reader)
         else:
-            r, cfo, to, res1x, res2x = detect_slow(Config, xp, fstart, tstart + dwin * Config.nsamp, reader, retsup, retsdown)
+            r, cfo, to, res1x, res2x, retsup, retsdown = detect_slow(Config, xp, fstart, tstart, dwin, reader, retsup, retsdown)
 
         if r is None: break
         res1.append(res1x)
