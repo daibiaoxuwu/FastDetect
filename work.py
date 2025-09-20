@@ -5,7 +5,7 @@ from Config import Config
 from reader import SlidingComplex64Reader
 from aft_decode import decode_payload
 # from pre_detect import FastDetectContext
-from pre_detect_slow import detect_slow, updown_gen
+from pre_detect import detect_slow, updown_gen
 
 
 def work(fstart, tstart, file_path):
