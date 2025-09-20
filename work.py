@@ -45,7 +45,7 @@ def work(fstart, tstart, file_path):
 
     updown_generator = updown_gen(max_dwin, tstart, fstart, Config, reader, upchirp, downchirp, split, Nup, Ndown, FFT_N)
 
-    for dwin in tqdm(range(min(20, max_dwin))): # !!!
+    for dwin in tqdm(range(min(2000, max_dwin))): # !!!
         r, cfo, to, res1x, res2x = detect_slow(Config, xp, fstart, tstart, dwin, updown_generator, bwnew2, FFT_N)
 
         if r is None: break

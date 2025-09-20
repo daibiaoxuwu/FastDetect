@@ -1,20 +1,20 @@
 from utils import xp, xfft, USE_GPU, around
 import argparse
 
-# parser = argparse.ArgumentParser()
-# parser.add_argument('--sf', type=int, default=10, help="Set the value of sf")
-# args = parser.parse_args(args=[])
+parser = argparse.ArgumentParser()
+parser.add_argument('--sf', type=int, default=10, help="Set the value of sf")
+args = parser.parse_args(args=[])
 
 class Config:
-    sf = 12
-    bw = 406250
-    sig_freq = 2.4e9
-    preamble_len = 240
+    sf = args.sf
+    bw = 125000
+    sig_freq = 904.1e6
+    preamble_len = 8
     payload_len = 16
-    guess_f = -40000
+    guess_f = 0
     fs = 1e6
-    skip_preambles = 8
-    code_len = 2
+    skip_preambles = 0  # skip first 8 preambles ## TODO
+    code_len = 0
 
     sfdpos = preamble_len + code_len
     sfdend = sfdpos + 2
