@@ -5,7 +5,7 @@ from Config import Config
 from reader import SlidingComplex64Reader
 from aft_decode import decode_payload
 # from pre_detect import FastDetectContext
-from pre_detect_slow import detect_slow, detect_slow_init
+from pre_detect_slow import detect_slow, updown_gen
 
 
 def work(fstart, tstart, file_path):
@@ -27,12 +27,26 @@ def work(fstart, tstart, file_path):
     res2 = []
     # fast_detect = FastDetectContext(Config, xp, fstart)
     nsamp_small = 2 ** Config.sf / Config.bw * Config.fs
-    num_values = (file_size // complex64_size - around(nsamp_small * (2 + Config.sfdpos + 1) + tstart) + Config.nsamp) // Config.nsamp
-    for dwin in tqdm(range(min(20, num_values))): # !!!
-        if dwin == 0:
-            r, cfo, to, res1x, res2x, retsup, retsdown = detect_slow_init(Config, xp, fstart, tstart, dwin, reader)
-        else:
-            r, cfo, to, res1x, res2x, retsup, retsdown = detect_slow(Config, xp, fstart, tstart, dwin, reader, retsup, retsdown)
+    max_dwin = (file_size // complex64_size - around(nsamp_small * (2 + Config.sfdpos + 1) + tstart) + Config.nsamp) // Config.nsamp
+
+    x = xp.arange(Config.nsamp) * (1 + fstart / Config.sig_freq)
+    bwnew  = Config.bw * (1 + fstart / Config.sig_freq)
+    bwnew2 = Config.bw * (1 - 2 * fstart / Config.sig_freq)
+    beta        = Config.bw / ((2 ** Config.sf) / Config.bw)
+    betanew     = beta * (1 + 2 * fstart / Config.sig_freq)
+
+    upchirp   = xp.exp(2j * xp.pi * (betanew / 2 * x ** 2 / Config.fs ** 2 + (-bwnew / 2) * x / Config.fs))
+    downchirp = xp.conj(upchirp)
+
+    Nup   = Config.preamble_len
+    Ndown = 2
+    FFT_N = Config.fft_n
+    split = int(xp.around(bwnew2 / Config.fs * FFT_N))
+
+    updown_generator = updown_gen(max_dwin, tstart, fstart, Config, reader, upchirp, downchirp, split, Nup, Ndown, FFT_N)
+
+    for dwin in tqdm(range(min(20, max_dwin))): # !!!
+        r, cfo, to, res1x, res2x = detect_slow(Config, xp, fstart, tstart, dwin, updown_generator, bwnew2, FFT_N)
 
         if r is None: break
         res1.append(res1x)
