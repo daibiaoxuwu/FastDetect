@@ -5,15 +5,14 @@ from Config import Config
 from reader import SlidingComplex64Reader
 from aft_decode import decode_payload
 # from pre_detect import FastDetectContext
-from pre_detect_slow import detect_slow
+from pre_detect_slow import detect_slow, detect_slow_init
 
 
 def work(fstart, tstart, file_path):
     file_size = os.path.getsize(file_path)
     complex64_size = xp.dtype(xp.complex64).itemsize
     assert complex64_size == 8
-    num_values = file_size // complex64_size // Config.nsamp
-    print(f"{file_path=} Size in Number of symbols: {num_values}")
+    print(f"{file_path=} Size in Number of symbols: {file_size // complex64_size // Config.nsamp}")
 
     reader = SlidingComplex64Reader(file_path)
    
@@ -27,9 +26,14 @@ def work(fstart, tstart, file_path):
     res1 = []
     res2 = []
     # fast_detect = FastDetectContext(Config, xp, fstart)
+    nsamp_small = 2 ** Config.sf / Config.bw * Config.fs
+    num_values = (file_size // complex64_size - around(nsamp_small * (2 + Config.sfdpos + 1) + tstart) + Config.nsamp) // Config.nsamp
+    for dwin in tqdm(range(min(20, num_values))): # !!!
+        if dwin == 0:
+            r, cfo, to, res1x, res2x, retsup, retsdown = detect_slow_init(Config, xp, fstart, tstart + dwin * Config.nsamp, reader)
+        else:
+            r, cfo, to, res1x, res2x = detect_slow(Config, xp, fstart, tstart + dwin * Config.nsamp, reader, retsup, retsdown)
 
-    for dwin in range(2000): # !!!
-        r, cfo, to, res1x, res2x = detect_slow(Config, xp, fstart, tstart + dwin * Config.nsamp, reader)
         if r is None: break
         res1.append(res1x)
         res2.append(res2x)
