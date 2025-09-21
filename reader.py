@@ -1,6 +1,6 @@
 from utils import xp
 
-class SlidingComplex64Reader:
+class SlidingComplex64Reader: # TODO reader slow unbuffered
     dtype = xp.complex64
     itemsize = 8  # complex64
 

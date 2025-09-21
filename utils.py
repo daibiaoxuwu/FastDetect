@@ -1,6 +1,7 @@
 import plotly.graph_objects as go
 import logging
 import os
+from scipy.optimize import minimize
 
 # utils.py
 import os
@@ -38,6 +39,12 @@ file_handler.setLevel(level=logging.INFO)
 logger.addHandler(file_handler)
 
 # -------- light helpers (backend-agnostic) --------
+def wrap(x):
+    return (x + xp.pi) % (2 * xp.pi) - xp.pi
+
+def sqlist(lst):
+    return xp.array([item if isinstance(item, (int, float)) else item.item() for item in lst])
+
 def to_device(x):
     """Move/convert Python or NumPy data to the active backend array (CuPy on GPU, NumPy on CPU)."""
     return asarray(x)
@@ -56,6 +63,12 @@ def to_scalar(x):
         pass
     return x
 
+def optimize_1dfreq_fast(sig2, tsymbr, freq1, margin):
+    def obj1(freq, xdata, ydata):
+        return -xp.abs(ydata.dot(xp.exp(xdata * -1j * 2 * xp.pi * freq.item()))).item()
+    result = minimize(obj1, freq1.item(), args=(tsymbr, sig2), bounds=[(freq1 - margin, freq1 + margin)]) #!!!
+    return result.x[0], - result.fun / xp.sum(xp.abs(sig2))
+
 def to_scalar_list(lst):
     """Map list of numbers/0-d arrays to pure Python scalars."""
     out = []
@@ -73,7 +86,24 @@ def around(x):
     """Round to nearest integer (works for Python num or 0-d array)."""
     return round(float(to_scalar(x)))
 
+def optimize_1dfreq(sig2, tsymbr, freq, margin):
+    def obj1(xdata, ydata, freq):
+        return xp.abs(ydata.dot(xp.exp(-1j * 2 * xp.pi * freq * xdata)))
 
+    margin = 500
+    val = obj1(tsymbr, sig2, freq)
+    for i in range(10):
+        xvals = xp.linspace(freq - margin, freq + margin, 1001)
+        yvals = [obj1(tsymbr, sig2, f) for f in xvals]
+        yvals = sqlist(yvals)
+        freq = xvals[xp.argmax(yvals)]
+        valnew = xp.max(yvals)
+        if valnew < val * (1 - 1e-7):
+            pltfig1(xvals, yvals, addvline=(freq,), title=f"{i=} {val=} {valnew=}").show()
+        assert valnew >= val * (1 - 1e-7), f"{val=} {valnew=} {i=} {val-valnew=}"
+        if abs(valnew - val) < 1e-7: margin /= 4
+        val = valnew
+    return freq, val / xp.sum(xp.abs(sig2))
 
 def pltfig(datas, title = None, yaxisrange = None, modes = None, marker = None, addvline = None, addhline = None, line_dash = None, fig = None, line=None):
     """
