@@ -205,7 +205,7 @@ def find_intersections(coefa, coefb, tstart2,reader, epsilon, margin=10, draw=Fa
     if draw:
         vals = [cp.sum(val1[:np.ceil(x * Config.fs - xv[0])]) + cp.sum(val2[np.ceil(x * Config.fs - xv[0]):]) for x in
                 intersection_points]
-        # pltfig1(intersection_points, vals, mode="markers", title="temp1").show()
+        pltfig1(intersection_points, vals, mode="markers", title="temp1").show()
         xv = to_device(np.arange(np.ceil(to_host(x_min) * Config.fs), np.ceil(to_host(x_max) * Config.fs), dtype=int))
         fig.add_trace(
             go.Scatter(x=to_host(xv / Config.fs), y=to_host(cp.angle(sig)), mode='markers',
@@ -213,7 +213,7 @@ def find_intersections(coefa, coefb, tstart2,reader, epsilon, margin=10, draw=Fa
                        marker=dict(color='blue', size=4, symbol='circle')),
         )
         if len(intersection_points) != 0:
-            fig.add_vline(x = selected, line=dict(color='red'))
+            fig.add_vline(x = to_host(selected), line=dict(color='red'))
 
 
         fig.show()

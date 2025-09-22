@@ -16,7 +16,7 @@ def symbtime(coeff, coeft, reader, coeflist, margin=1000, nextstep=0):
     if 1:
         for pidx in xp.arange(10, Config.preamble_len):
             tstart2 = xp.polyval(coeft, pidx)
-            selected = find_intersections(coeflist[pidx - 1], coeflist[pidx], tstart2, reader, 1e-4, margin=margin, draw=False, remove_range=False) #!!! TODO remove range
+            selected = find_intersections(coeflist[pidx - 1], coeflist[pidx], tstart2, reader, 1e-4, margin=margin, draw=True, remove_range=False) #!!! TODO remove range
             if selected != None:
                 dx.append(pidx)
                 dy.append(to_scalar(selected))
