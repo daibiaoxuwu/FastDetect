@@ -10,13 +10,24 @@ from pre_detect import myfft
 
 def symbtime(coeff, coeft, reader, coeflist, margin=1000, nextstep=0):
 
+    # see if the time estimations are correct
+    # for pidx in xp.arange(10, Config.preamble_len, 20):
+    #     tstart2 = xp.polyval(coeft, pidx)
+    #     margin1 = 20
+    #     nsymbr = xp.arange(around(tstart2 * Config.fs - margin1), around(tstart2 * Config.fs + margin1)).astype(xp.int64)
+    #     tsymbr = nsymbr / Config.fs
+
+    #     fig = pltfig1(tsymbr, xp.angle(reader.get(to_scalar(nsymbr[0]), len(nsymbr))), mode='markers', marker=dict(color='blue', size=4, symbol='circle'))
+    #     fig = pltfig1(tsymbr, wrap(xp.polyval(coeflist[pidx - 1], tsymbr)), fig=fig)
+    #     pltfig1(tsymbr, wrap(xp.polyval(coeflist[pidx], tsymbr)), title=f"pidx={pidx} phase diff", addvline=(tstart2,), fig=fig).show()
+
     # coarse estimation of range
     dx = []
     dy = []
-    if 1:
+    if True:
         for pidx in xp.arange(10, Config.preamble_len):
             tstart2 = xp.polyval(coeft, pidx)
-            selected = find_intersections(coeflist[pidx - 1], coeflist[pidx], tstart2, reader, 1e-4, margin=margin, draw=True, remove_range=False) #!!! TODO remove range
+            selected = find_intersections(coeflist[pidx - 1], coeflist[pidx], tstart2, reader, 1e-5, margin=margin, draw=False, remove_range=False) #!!! TODO remove range
             if selected != None:
                 dx.append(pidx)
                 dy.append(to_scalar(selected))
