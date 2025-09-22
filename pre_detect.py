@@ -4,12 +4,6 @@ from matplotlib import pyplot as plt
 
 # ---------- helpers already in your file ----------
 
-def myfft(chirp_data, n, plan):
-    if USE_GPU:
-        return xfft.fftshift(xfft.fft(chirp_data.astype(xp.complex64), n=n, plan=plan))
-    else:
-        return xfft.fftshift(xfft.fft(chirp_data.astype(xp.complex64), n=n))
-
 def add_freq(pktdata_in, est_cfo_freq):
     cfosymb = xp.exp(2j * xp.pi * est_cfo_freq * xp.linspace(
         0, (len(pktdata_in) - 1) / Config.fs, num=len(pktdata_in)))

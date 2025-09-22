@@ -6,7 +6,7 @@ from reader import SlidingComplex64Reader
 from matplotlib import pyplot as plt
 from scipy.optimize import minimize
 from find_intersections import find_intersections
-from pre_detect import myfft
+from decode_core import decode_core
 
 def symbtime(coeff, coeft, reader, coeflist, margin=1000, nextstep=0):
 
@@ -24,7 +24,7 @@ def symbtime(coeff, coeft, reader, coeflist, margin=1000, nextstep=0):
     # coarse estimation of range
     dx = []
     dy = []
-    if True:
+    if False:
         for pidx in xp.arange(10, Config.preamble_len):
             tstart2 = xp.polyval(coeft, pidx)
             selected = find_intersections(coeflist[pidx - 1], coeflist[pidx], tstart2, reader, 1e-5, margin=margin, draw=False, remove_range=False) #!!! TODO remove range
@@ -33,10 +33,10 @@ def symbtime(coeff, coeft, reader, coeflist, margin=1000, nextstep=0):
                 dy.append(to_scalar(selected))
         dx = xp.array(dx)
         dy = xp.array(dy)
-        with open(f"intersections{nextstep}.pkl","wb") as f:
+        with open(f"intersections0.pkl","wb") as f:
             pickle.dump((dx, dy), f)
 
-    with open(f"intersections{nextstep}.pkl","rb") as f:
+    with open(f"intersections0.pkl","rb") as f:
         dx, dy = pickle.load(f)
     coeff_time = xp.polyfit(dx, dy, 1)
 
@@ -265,27 +265,27 @@ def symbtime(coeff, coeft, reader, coeflist, margin=1000, nextstep=0):
         codephase2 = [] # !!! todo !!!
         powers = []
         codes = []
-        for pidx in range(Config.preamble_len + 5, Config.payload_len):
+        for pidx in range(Config.preamble_len + 5, Config.total_len):
             tstart = xp.polyval(coeff_time, pidx - 0.75)
             tend = xp.polyval(coeff_time, pidx + 1 - 0.75)
             x1 = math.ceil(tstart * Config.fs)
             x2 = math.ceil(tend * Config.fs)
             nsymbr = xp.arange(x1, x2)
             sig = reader.get(x1, x2 - x1)
-            if xp.mean(xp.abs(sig)) < 0.1:
+            if xp.mean(xp.abs(sig)) < 0.01:
                 logger.error(f"{pidx=} {xp.mean(xp.abs(sig))=} too small. is symbol ending? quitting, payload_len={pidx - Config.preamble_len - 5}")
                 break
-            # code, endphase, coef2d_est2, coef2d_est2a, res2, res2a, ifreq1, ifreq2 = decode_core(reader, tstart, tend, coeff, startphase, pidx)
-            # startphase = endphase
-            # powers.append(xp.abs(res2).item())
-            # powers.append(xp.abs(res2a).item())
-            # codephase2.append(xp.angle(res2).item())
-            # codephase2.append(xp.angle(res2a).item())
-            # codephase.append(xp.angle(res2).item())
-            # codephase.append(xp.angle(res2a).item())
-            # coef2d_ests.append(coef2d_est2)
-            # coef2d_ests.append(coef2d_est2a)
-            # codes.append(code)
+            code, endphase, coef2d_est2, coef2d_est2a, res2, res2a, ifreq1, ifreq2 = decode_core(reader, tstart, tend, coeff, startphase, pidx)
+            startphase = endphase
+            powers.append(xp.abs(res2).item())
+            powers.append(xp.abs(res2a).item())
+            codephase2.append(xp.angle(res2).item())
+            codephase2.append(xp.angle(res2a).item())
+            codephase.append(xp.angle(res2).item())
+            codephase.append(xp.angle(res2a).item())
+            coef2d_ests.append(coef2d_est2)
+            coef2d_ests.append(coef2d_est2a)
+            codes.append(code)
 
         anslist = []
         anslista = []

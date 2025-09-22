@@ -63,6 +63,14 @@ def to_scalar(x):
         pass
     return x
 
+
+def myfft(chirp_data, n, plan):
+    if USE_GPU:
+        return xfft.fftshift(xfft.fft(chirp_data.astype(xp.complex64), n=n, plan=plan))
+    else:
+        return xfft.fftshift(xfft.fft(chirp_data.astype(xp.complex64), n=n))
+
+
 def optimize_1dfreq_fast(sig2, tsymbr, freq1, margin):
     def obj1(freq, xdata, ydata):
         return -xp.abs(ydata.dot(xp.exp(xdata * -1j * 2 * xp.pi * freq.item()))).item()

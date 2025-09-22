@@ -10,7 +10,7 @@ class Config:
     bw = 406250
     sig_freq = 2.4e9
     preamble_len = 240
-    payload_len = 16
+    payload_len = 70
     guess_f = -40000
     fs = 1e6
     skip_preambles = 8

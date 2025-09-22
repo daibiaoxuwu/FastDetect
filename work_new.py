@@ -4,7 +4,6 @@ from Config import Config
 from reader import SlidingComplex64Reader
 from matplotlib import pyplot as plt
 import math
-from pre_detect import myfft
 from symbtime import symbtime
 
 
@@ -143,5 +142,5 @@ def work_new(fstart, tstart, file_path):
     # coeft = fitcoef4(coeff, coeft, reader) # do this to check correctness of fitcoef4
 
     coeflist = fitcoef2(coeff, coeft, reader)
-    coeff, coeft = symbtime(coeff, coeft, reader, coeflist)
+    coeff, coeft = symbtime(coeff, coeft, reader, coeflist, nextstep=1)
     print(coeff, coeft)
