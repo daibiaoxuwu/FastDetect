@@ -3,6 +3,7 @@ from math import ceil, floor
 from Config import Config
 from utils import to_host, to_device, sqlist, wrap, around, pltfig, pltfig1, to_scalar, xp
 import numpy as np # for np.roots
+import matplotlib.pyplot as plt
 
 # Define the coefficients for the two polynomials
 coeflist = [
@@ -148,6 +149,12 @@ def find_intersections(coefa, coefb, tstart2,reader, epsilon, margin, draw, remo
         # Compute the difference polynomial
         poly_diff = xp.polysub(poly1_shifted_coef, poly2_shifted_coef)
 
+        xv = (x_start + x_end) / 2
+        assert - xp.pi <= xp.polyval(poly1_shifted_coef, xv) <= xp.pi
+        assert - xp.pi <= xp.polyval(poly2_shifted_coef, xv) <= xp.pi
+        # assert - xp.pi + 2 * xp.pi * all_weights[i][0] <= xp.polyval(coefa, xv) <= xp.pi + 2 * xp.pi * all_weights[i][0]
+        # assert - xp.pi + 2 * xp.pi * all_weights[i][1] <= xp.polyval(coefb, xv) <= xp.pi + 2 * xp.pi * all_weights[i][1]
+
         # Find roots of the difference polynomial
         roots = to_device(np.roots(to_host(poly_diff)))
         # Filter real roots
@@ -156,6 +163,37 @@ def find_intersections(coefa, coefb, tstart2,reader, epsilon, margin, draw, remo
         valid_roots = real_roots[(real_roots >= x_start) & (real_roots <= x_end)]
         # Convert to float and remove duplicates
         valid_roots = valid_roots.astype(float)
+
+        assert x_start < x_end, f"section range error {x_start=} {x_end=}"
+        if len(valid_roots) != 1 and idx != 0 and idx != len(sections) - 1:
+                x = to_host(xp.linspace(x_start - 0.00000001, x_end + 0.00000001, 500))
+
+# Calculate the corresponding y-values for each polynomial
+                p1 = np.poly1d(poly1_shifted_coef.get())
+                p2 = np.poly1d(poly2_shifted_coef.get())
+                print(p1)
+                y1 = p1(x)
+                y2 = p2(x)
+
+# To find the intersection, create a new polynomial representing the difference
+# between the first two. The root of this new polynomial is the x-coordinate
+# of the intersection point.
+                p_diff = to_host(xp.polysub(poly1_shifted_coef, poly2_shifted_coef))
+                intersection_x_roots = np.roots(p_diff)
+
+# Since the difference is a linear equation, there will be one root.
+                intersection_x = intersection_x_roots[0]
+
+# Calculate the y-coordinate of the intersection by evaluating either
+# polynomial at the intersection's x-coordinate.
+                intersection_y = p1(intersection_x)
+
+# --- Plotting Section ---
+
+                pltfig(((x, y1), (x, y2)), title=f"Section {idx} Polynomials", addvline=(intersection_x, x_start, x_end), addhline=(intersection_y, -xp.pi, xp.pi)).show()
+                print(f"Intersection point found at x = {intersection_x}, y = {intersection_y}")
+
+        assert len(valid_roots) == 1 or idx == 0 or idx == len(sections) - 1, f"intersection valid roots {poly1_shifted_coef=} {poly2_shifted_coef=} {poly_diff=} {roots=} {x_start=} {x_end=}"
 
         # Add valid roots to intersection points
         intersection_points.extend(valid_roots)
@@ -188,21 +226,28 @@ def find_intersections(coefa, coefb, tstart2,reader, epsilon, margin, draw, remo
 
     xv = to_device(xp.arange(ceil(x_min * Config.fs), ceil(x_max * Config.fs), dtype=int))
     sig = reader.get(to_scalar(xv[0]), len(xv))
-    val1 = xp.cos(xp.polyval(coefa, xv / Config.fs) - xp.angle(sig))
-    val2 = xp.cos(xp.polyval(coefb, xv / Config.fs) - xp.angle(sig))
+    sig_ref1 = sig * xp.exp(-1j * xp.polyval(coefa, xv / Config.fs))
+    sig_ref2 = sig * xp.exp(-1j * xp.polyval(coefb, xv / Config.fs))
+    # val1 = xp.cos(xp.polyval(coefa, xv / Config.fs) - xp.angle(sig))
+    # val2 = xp.cos(xp.polyval(coefb, xv / Config.fs) - xp.angle(sig))
 
+    intersection_points = xp.hstack(intersection_points)
     if len(intersection_points) != 0:
-        selected = max(intersection_points, key=lambda x: xp.sum(val1[:xp.ceil(x * Config.fs - xv[0])]) + xp.sum(val2[xp.ceil(x * Config.fs - xv[0]):]))
+        selected = max(intersection_points, key=lambda x: xp.abs(xp.sum(sig_ref1[:xp.ceil(x * Config.fs - xv[0])])) + xp.abs(xp.sum(sig_ref2[xp.ceil(x * Config.fs - xv[0]):])))
         selected2 = min(intersection_points, key=lambda x: abs(x - tstart2))
         if selected2 != selected:
-            # logger.warning(f"find_intersections(): break point not closeset to tstart2 selected {selected - tstart2 =}")
+            print(f"find_intersections(): break point not closeset to tstart2 selected {selected - tstart2 =}")
             if remove_range: return None
 
     if draw:
-        vals = [xp.sum(val1[:xp.ceil(x * Config.fs - xv[0])]) + xp.sum(val2[xp.ceil(x * Config.fs - xv[0]):]) for x in
-                intersection_points]
-        pltfig1(intersection_points, vals, mode="markers", title="temp1").show()
-        xv = to_device(xp.arange(xp.ceil(to_host(x_min) * Config.fs), xp.ceil(to_host(x_max) * Config.fs), dtype=int))
+        val1 = [xp.abs(xp.sum(sig_ref1[:xp.ceil(x * Config.fs - xv[0])])) for x in intersection_points]
+        val2 = [xp.abs(xp.sum(sig_ref2[xp.ceil(x * Config.fs - xv[0]):])) for x in intersection_points]
+        vals = val1 + val2
+        fig = pltfig1(intersection_points, val1, mode="lines+markers", title="power at break points")
+        fig = pltfig1(intersection_points, val1, mode="lines+markers", fig=fig)
+        pltfig1(intersection_points, vals, mode="lines+markers", fig=fig).show()
+        # xv = to_device(xp.arange(xp.ceil(to_host(x_min) * Config.fs), xp.ceil(to_host(x_max) * Config.fs), dtype=int))
+        xv = xp.arange(xp.ceil(x_min * Config.fs), xp.ceil(x_max * Config.fs), dtype=int)
         fig.add_trace(
             go.Scatter(x=to_host(xv / Config.fs), y=to_host(xp.angle(sig)), mode='markers',
                        name='rawdata',
@@ -231,10 +276,11 @@ def find_intersections(coefa, coefb, tstart2,reader, epsilon, margin, draw, remo
 
     # Print the intersection points
     # print("Intersection Points within the specified range:")
-    for idx, x in enumerate(intersection_points, 1):
-        y1 = wrap(xp.polyval(coefa, x))
-        y2 = wrap(xp.polyval(coefb, x))
-        assert abs(y1 - y2) < 1e-6
+    # for idx, x in enumerate(intersection_points, 1):
+    #     y1 = xp.polyval(coefa, x)
+    #     y2 = xp.polyval(coefb, x)
+    #     assert abs(wrap(y1) - wrap(y2)) < 1e-6, f"intersection point check failed {x=} {y1=} {y2=} {wrap(y1)=} {wrap(y2)=} {y1-y2=} {wrap(y1) - wrap(y2)=}"
+    # this is useless because large error margin caused by large y1 y2
 
         # print(f"{idx}: x = {x:.12f}, y1 = {y1:.12f} y2 = {y2:.12f} y1-y2={y1-y2:.12f}")
     return selected

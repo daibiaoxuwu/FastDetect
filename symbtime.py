@@ -128,7 +128,7 @@ def symbtime(coeff, coeft, reader, coeflist, margin=1000, nextstep=0):
         nsymbr = xp.arange(x1, x2)
         tsymbr = nsymbr / Config.fs
         sig = reader.get(x1, x2 - x1)
-        res = sig.dot(xp.exp(-1j * xp.polyval(to_host(coeffitlist[pidx]), tsymbr)))
+        res = sig.dot(xp.exp(-1j * xp.polyval(coeffitlist[pidx], tsymbr)))
         codephase.append(xp.angle(res).item())
         powers.append(xp.abs(res).item() / xp.sum(xp.abs(sig)).item())
     # pltfig1(None, xp.unwrap(codephase), title="unwrap phase").show()
