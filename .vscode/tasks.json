@@ -1,0 +1,16 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Open main.py via CLI",
+            "type": "shell",
+            "command": "code",
+            "args": [
+                "--goto",
+                "${workspaceFolder}/main.py"
+            ],
+            "presentation": { "reveal": "never" },
+            "problemMatcher": []
+        }
+    ]
+}
